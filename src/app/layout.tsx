@@ -19,9 +19,9 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Definitivo — QR de Pix, Instagram e Wi-Fi",
+  title: "Definitivo — QR de Pix, Instagram, Wi-Fi e site",
   description:
-    "Gere um QR Code estático de Pix com CPF ou celular, o QR do Instagram e o QR da rede Wi-Fi. Tudo no navegador, pronto para imprimir.",
+    "Gere um QR Code estático de Pix, o QR do Instagram, o da rede Wi-Fi e o de um site. Tudo no navegador, pronto para imprimir.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

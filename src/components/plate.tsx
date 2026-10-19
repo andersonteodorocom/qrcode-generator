@@ -10,7 +10,7 @@ export type PlateModel = {
   index: string;
   kicker: string;
   title: string;
-  accent: "pix" | "instagram" | "wifi";
+  accent: "pix" | "instagram" | "wifi" | "site";
   lines: { label: string; value: string }[];
   technical: string | null;
   footnote: string;
@@ -25,12 +25,14 @@ const accentBar = {
   pix: "bg-pix",
   instagram: "bg-instagram",
   wifi: "bg-wifi",
+  site: "bg-site",
 } as const;
 
 const accentText = {
   pix: "text-pix",
   instagram: "text-instagram",
   wifi: "text-wifi",
+  site: "text-site",
 } as const;
 
 function download(filename: string, href: string) {

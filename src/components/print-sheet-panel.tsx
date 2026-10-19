@@ -6,12 +6,14 @@ import { createInstagram } from "@/lib/instagram";
 import { createPix } from "@/lib/pix";
 import { downloadPrintSheet, printPrintSheet } from "@/lib/print-pdf";
 import { buildPrintSheet, type SheetKind } from "@/lib/print-sheet";
+import { createSite } from "@/lib/site";
 import { createWifi } from "@/lib/wifi";
 
 const OPTIONS: { id: SheetKind; label: string }[] = [
   { id: "pix", label: "Pix" },
   { id: "instagram", label: "Instagram" },
   { id: "wifi", label: "Wi-Fi" },
+  { id: "site", label: "Site" },
 ];
 
 export function PrintSheetPanel({
@@ -19,13 +21,15 @@ export function PrintSheetPanel({
   pix,
   instagram,
   wifi,
+  site,
 }: {
   shopName: string;
   pix: ReturnType<typeof createPix>;
   instagram: ReturnType<typeof createInstagram>;
   wifi: ReturnType<typeof createWifi>;
+  site: ReturnType<typeof createSite>;
 }) {
-  const [selected, setSelected] = useState<SheetKind[]>(["pix", "instagram", "wifi"]);
+  const [selected, setSelected] = useState<SheetKind[]>(["pix", "instagram", "wifi", "site"]);
   const [busy, setBusy] = useState<"download" | "print" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,8 +45,9 @@ export function PrintSheetPanel({
         wifi: wifi.ok
           ? { ok: true, payload: wifi.payload, ssid: wifi.ssid, password: wifi.password }
           : { ok: false },
+        site: site.ok ? { ok: true, url: site.url } : { ok: false },
       }),
-    [instagram, pix, selected, shopName, wifi],
+    [instagram, pix, selected, shopName, site, wifi],
   );
 
   function toggle(kind: SheetKind) {
@@ -72,18 +77,20 @@ export function PrintSheetPanel({
         ? "Dois cartões na mesma folha."
         : sheet?.count === 3
           ? "Central de QR Codes, com os três na mesma folha."
-          : "Marque pelo menos um código já preenchido.";
+          : sheet?.count === 4
+            ? "Central de QR Codes, com os quatro na mesma folha."
+            : "Marque pelo menos um código já preenchido.";
 
   return (
     <section className="no-print mt-8 grid gap-4 rounded-[1.75rem] border border-border bg-card/80 p-5 sm:p-6">
       <div className="grid gap-2">
         <h2 className="font-display text-2xl tracking-tight">Folha para a impressora de casa</h2>
         <p className="max-w-xl text-sm leading-6 text-muted-foreground">
-          A4 em pé, para o balcão ou a vitrine. Escolha um, dois ou os três. A senha do Wi-Fi entra
-          no QR e não é escrita na folha.
+          A4 em pé, para o balcão ou a vitrine. Escolha de um a quatro. A senha do Wi-Fi entra no QR
+          e não é escrita na folha.
         </p>
       </div>
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {OPTIONS.map((option) => (
           <label key={option.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-3 text-sm">
             <input

@@ -11,6 +11,7 @@ const ready = {
     ssid: "Casa da Maria",
     password: "senha-secreta",
   },
+  site: { ok: true, url: "https://loja.com.br" },
 };
 
 function sheet(selected: SheetKind[]) {
@@ -57,11 +58,85 @@ describe("folha A4", () => {
     assert.equal(onlyWifi.count, 1);
     assert.equal(onlyWifi.blocks[0]?.kind, "wifi");
     assert.equal(onlyWifi.shopName, null);
-    assert.equal(buildPrintSheet({ selected: ["pix"], shopName: "", pix: { ok: false }, instagram: { ok: false }, wifi: { ok: false } }), null);
+    assert.equal(
+      buildPrintSheet({
+        selected: ["pix"],
+        shopName: "",
+        pix: { ok: false },
+        instagram: { ok: false },
+        wifi: { ok: false },
+        site: { ok: false },
+      }),
+      null,
+    );
+  });
+
+  it("inclui o site sozinho, junto com outro código, ou os quatro", () => {
+    const onlySite = sheet(["site"]);
+    assert.ok(onlySite);
+    assert.equal(onlySite.count, 1);
+    assert.equal(onlySite.header, null);
+    assert.equal(onlySite.blocks[0]?.title, "Acesse o site");
+    assert.equal(onlySite.blocks[0]?.payload, "https://loja.com.br");
+    assert.equal(onlySite.geometry.qrSizeMm, 120);
+
+    const pair = sheet(["site", "pix"]);
+    assert.ok(pair);
+    assert.equal(pair.count, 2);
+    assert.deepEqual(
+      pair.blocks.map((block) => block.kind),
+      ["pix", "site"],
+    );
+
+    const four = sheet(["wifi", "site", "pix", "instagram"]);
+    assert.ok(four);
+    assert.equal(four.count, 4);
+    assert.equal(four.header, "Central de QR Codes");
+    assert.equal(four.shopName, "Padaria Luz");
+    assert.deepEqual(
+      four.blocks.map((block) => block.kind),
+      ["pix", "instagram", "wifi", "site"],
+    );
+    assert.equal(four.geometry.cards.length, 4);
+    assert.ok(four.geometry.header);
+    assert.ok(four.geometry.qrSizeMm >= 50);
+    assert.ok(four.geometry.qrSizeMm < 88);
+    const [first, second, third] = four.geometry.cards;
+    assert.equal(first?.y, second?.y);
+    assert.ok((first?.x ?? 0) < (second?.x ?? 0));
+    assert.ok((first?.y ?? 0) < (third?.y ?? 0));
+
+    const skipped = buildPrintSheet({
+      selected: ["site", "pix"],
+      shopName: "Padaria Luz",
+      pix: ready.pix,
+      instagram: { ok: false },
+      wifi: { ok: false },
+      site: { ok: false },
+    });
+    assert.ok(skipped);
+    assert.equal(skipped.count, 1);
+    assert.equal(skipped.blocks[0]?.kind, "pix");
+  });
+
+  it("encurta o endereço visível e mantém a URL inteira no QR", () => {
+    const url = `https://loja.com.br/${"cardapio".repeat(12)}`;
+    const printed = buildPrintSheet({
+      selected: ["site"],
+      shopName: "Padaria Luz",
+      pix: { ok: false },
+      instagram: { ok: false },
+      wifi: { ok: false },
+      site: { ok: true, url },
+    });
+    assert.ok(printed);
+    assert.equal(printed.blocks[0]?.payload, url);
+    assert.equal(printed.blocks[0]?.value.endsWith("..."), true);
+    assert.ok(printed.blocks[0].value.length < url.length);
   });
 
   it("cabe numa A4 com margem de 12 mm", () => {
-    for (const count of [1, 2, 3] as const) {
+    for (const count of [1, 2, 3, 4] as const) {
       const geometry = printGeometry(count);
       const boxes = geometry.header ? [geometry.header, ...geometry.cards] : geometry.cards;
       assert.equal(geometry.cards.length, count);

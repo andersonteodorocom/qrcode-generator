@@ -5,6 +5,7 @@ Gerador de QR Code para imprimir e continuar usando:
 - **Pix** com CPF, CNPJ, celular ou e-mail, no BR Code estático do Banco Central
 - **Instagram**, abrindo o perfil
 - **Wi-Fi**, com o nome da rede e a senha
+- **Site**, abrindo um endereço http ou https da loja
 
 Nada é enviado a um servidor. A chave, a senha e o usuário ficam no navegador.
 
@@ -38,6 +39,8 @@ O Pix é estático: não tem data de validade e pode ser pago mais de uma vez. C
 O Instagram é o link `https://www.instagram.com/usuario/`.
 
 O Wi-Fi usa o formato lido pela câmera do iPhone e do Android: `WIFI:T:WPA;S:nome;P:senha;;`.
+
+O site grava o próprio endereço. `loja.com.br` vira `https://loja.com.br`. Um `http://` escrito à mão permanece http.
 
 ## Coolify
 

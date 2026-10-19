@@ -25,10 +25,11 @@ import {
   type AmountMode,
   type PixKeyType,
 } from "@/lib/pix";
+import { createSite } from "@/lib/site";
 import { createWifi, securityLabel, type WifiSecurity } from "@/lib/wifi";
 import { cn } from "@/lib/utils";
 
-type Mode = "pix" | "instagram" | "wifi";
+type Mode = "pix" | "instagram" | "wifi" | "site";
 
 const modes: { id: Mode; index: string; title: string; text: string }[] = [
   {
@@ -48,6 +49,12 @@ const modes: { id: Mode; index: string; title: string; text: string }[] = [
     index: "03",
     title: "Wi-Fi",
     text: "Nome da rede e senha. A câmera do iPhone e do Android conecta.",
+  },
+  {
+    id: "site",
+    index: "04",
+    title: "Site",
+    text: "Cardápio, mapa ou a página da loja. A câmera abre o endereço.",
   },
 ];
 
@@ -112,6 +119,7 @@ export function QrStudio() {
   const [hidden, setHidden] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showSecretOnCard, setShowSecretOnCard] = useState(false);
+  const [siteUrl, setSiteUrl] = useState("");
 
   const pix = useMemo(
     () =>
@@ -132,6 +140,7 @@ export function QrStudio() {
     () => createWifi({ ssid, password, security, hidden }),
     [ssid, password, security, hidden],
   );
+  const site = useMemo(() => createSite(siteUrl), [siteUrl]);
 
   const noteLimit = useMemo(() => {
     if (keyType === "cpf" && isValidCpf(key)) return maxNoteLength(key.replace(/\D/g, ""));
@@ -149,6 +158,7 @@ export function QrStudio() {
     pix,
     instagram,
     wifi,
+    site,
     name,
     city,
     ssid,
@@ -166,14 +176,15 @@ export function QrStudio() {
         </h1>
         <p className="mt-4 max-w-xl text-lg leading-7 text-muted-foreground">
           QR Code para imprimir e continuar usando. Pix com CPF, CNPJ, celular ou
-          e-mail, perfil do Instagram e senha do Wi-Fi. O desenho nasce neste aparelho.
+          e-mail, perfil do Instagram, senha do Wi-Fi e o site da loja. O desenho nasce
+          neste aparelho.
         </p>
       </header>
 
       <div className="mt-8 grid items-start gap-8 lg:mt-10 lg:grid-cols-[minmax(0,1fr)_22.5rem]">
         <section className="no-print grid gap-6">
           <div className="grid gap-3">
-            <div role="tablist" aria-label="Tipo de código" className="grid grid-cols-3 gap-2">
+            <div role="tablist" aria-label="Tipo de código" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {modes.map((item) => {
                 const selected = item.id === mode;
                 return (
@@ -503,6 +514,31 @@ export function QrStudio() {
               </>
             ) : null}
 
+            {mode === "site" ? (
+              <Field
+                id="site-url"
+                label="Endereço"
+                error={site.ok ? undefined : site.error}
+                hint="Pode ser loja.com.br. O https:// entra sozinho."
+              >
+                <Input
+                  id="site-url"
+                  className={controlClass}
+                  type="text"
+                  inputMode="url"
+                  autoComplete="url"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  placeholder="loja.com.br"
+                  value={siteUrl}
+                  aria-invalid={site.ok ? undefined : Boolean(site.error)}
+                  aria-describedby={!site.ok && site.error ? "site-url-error" : "site-url-hint"}
+                  onValueChange={setSiteUrl}
+                />
+              </Field>
+            ) : null}
+
             {plate.payload ? (
               <a href="#chapa" className="text-sm font-medium underline underline-offset-4 lg:hidden">
                 Ver o cartão
@@ -516,7 +552,7 @@ export function QrStudio() {
         </div>
       </div>
 
-      <PrintSheetPanel shopName={name} pix={pix} instagram={instagram} wifi={wifi} />
+      <PrintSheetPanel shopName={name} pix={pix} instagram={instagram} wifi={wifi} site={site} />
 
       <footer className="no-print mt-10 max-w-2xl text-sm leading-6 text-muted-foreground">
         Chave Pix, senha e usuário não saem deste aparelho. O Pix segue o BR Code
@@ -531,6 +567,7 @@ function buildPlate(input: {
   pix: ReturnType<typeof createPix>;
   instagram: ReturnType<typeof createInstagram>;
   wifi: ReturnType<typeof createWifi>;
+  site: ReturnType<typeof createSite>;
   name: string;
   city: string;
   ssid: string;
@@ -560,6 +597,28 @@ function buildPlate(input: {
       payload: ready ? ready.url : null,
       payloadLabel: "Ver o link",
       filename: `definitivo-instagram-${filenamePart(ready?.username ?? "perfil")}`,
+    };
+  }
+
+  if (input.mode === "site") {
+    const ready = input.site.ok ? input.site : null;
+    return {
+      index: "04",
+      kicker: "Site",
+      title: "Acesse o site",
+      accent: "site",
+      lines: ready ? [{ label: "Endereço", value: ready.url }] : [],
+      technical: null,
+      footnote: "A câmera abre essa página. Se o endereço mudar, gere outro cartão.",
+      empty: input.site.ok
+        ? ""
+        : input.site.missing
+          ? "Falta o endereço."
+          : "Corrija o endereço para gravar o QR.",
+      alt: ready ? `QR Code do site ${ready.url}` : "QR Code de site",
+      payload: ready ? ready.url : null,
+      payloadLabel: "Ver o endereço",
+      filename: `definitivo-site-${filenamePart(ready?.url ?? "site")}`,
     };
   }
 

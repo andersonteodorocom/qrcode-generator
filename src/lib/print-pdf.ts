@@ -75,7 +75,7 @@ export async function renderPrintSheet(sheet: PrintSheet): Promise<jsPDF> {
   sheet.blocks.forEach((block, index) => {
     const card = sheet.geometry.cards[index];
     if (!card) return;
-    const shopOnCard = sheet.count === 3 ? null : sheet.shopName;
+    const shopOnCard = sheet.count >= 3 ? null : sheet.shopName;
     drawCard(doc, card, block, images[index], sheet.geometry.qrSizeMm, shopOnCard);
   });
 
@@ -83,7 +83,7 @@ export async function renderPrintSheet(sheet: PrintSheet): Promise<jsPDF> {
 }
 
 function fileName(sheet: PrintSheet): string {
-  if (sheet.count === 3) return "definitivo-central-qr.pdf";
+  if (sheet.count >= 3) return "definitivo-central-qr.pdf";
   const parts = sheet.blocks.map((block) => filenamePart(block.kind)).join("-");
   return `definitivo-folha-${parts}.pdf`;
 }

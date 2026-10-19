@@ -1,6 +1,8 @@
 export const A4 = { width: 210, height: 297, margin: 12 } as const;
 
-export type SheetKind = "pix" | "instagram" | "wifi";
+export type SheetKind = "pix" | "instagram" | "wifi" | "site";
+
+export type SheetCount = 1 | 2 | 3 | 4;
 
 export type SheetBlock = {
   kind: SheetKind;
@@ -18,7 +20,7 @@ export type PrintGeometry = {
 };
 
 export type PrintSheet = {
-  count: 1 | 2 | 3;
+  count: SheetCount;
   header: string | null;
   shopName: string | null;
   blocks: SheetBlock[];
@@ -29,11 +31,20 @@ const TITLES: Record<SheetKind, string> = {
   pix: "Pague com Pix",
   instagram: "Siga no Instagram",
   wifi: "Wi-Fi para clientes",
+  site: "Acesse o site",
 };
 
-const ORDER: SheetKind[] = ["pix", "instagram", "wifi"];
+const ORDER: SheetKind[] = ["pix", "instagram", "wifi", "site"];
 
-export function printGeometry(count: 1 | 2 | 3): PrintGeometry {
+const DISPLAY_LIMIT: Record<SheetCount, number> = { 1: 72, 2: 56, 3: 48, 4: 36 };
+
+export function truncateSheetText(value: string, max: number): string {
+  if (value.length <= max) return value;
+  if (max <= 3) return value.slice(0, max);
+  return `${value.slice(0, max - 3)}...`;
+}
+
+export function printGeometry(count: SheetCount): PrintGeometry {
   const { width, height, margin } = A4;
   const innerW = width - margin * 2;
   const innerH = height - margin * 2;
@@ -70,18 +81,41 @@ export function printGeometry(count: 1 | 2 | 3): PrintGeometry {
     };
   }
 
-  const headerH = 22;
-  const gap = 5;
-  const h = (innerH - headerH - gap * 3) / 3;
+  if (count === 3) {
+    const headerH = 22;
+    const gap = 5;
+    const h = (innerH - headerH - gap * 3) / 3;
+    return {
+      qrSizeMm: 50,
+      header: { x: margin, y: margin, w: innerW, h: headerH },
+      cards: [0, 1, 2].map((index) => ({
+        x: margin,
+        y: margin + headerH + gap + index * (h + gap),
+        w: innerW,
+        h,
+      })),
+    };
+  }
+
+  const headerH = 18;
+  const gap = 6;
+  const cardW = (innerW - gap) / 2;
+  const cardH = 102;
+  const blockH = headerH + gap + cardH * 2 + gap;
+  const top = margin + (innerH - blockH) / 2;
   return {
-    qrSizeMm: 50,
-    header: { x: margin, y: margin, w: innerW, h: headerH },
-    cards: [0, 1, 2].map((index) => ({
-      x: margin,
-      y: margin + headerH + gap + index * (h + gap),
-      w: innerW,
-      h,
-    })),
+    qrSizeMm: 64,
+    header: { x: margin, y: top, w: innerW, h: headerH },
+    cards: [0, 1, 2, 3].map((index) => {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      return {
+        x: margin + col * (cardW + gap),
+        y: top + headerH + gap + row * (cardH + gap),
+        w: cardW,
+        h: cardH,
+      };
+    }),
   };
 }
 
@@ -91,6 +125,7 @@ export function buildPrintSheet(input: {
   pix: { ok: boolean; payload?: string; displayKey?: string };
   instagram: { ok: boolean; url?: string; username?: string };
   wifi: { ok: boolean; payload?: string; ssid?: string; password?: string };
+  site?: { ok: boolean; url?: string };
 }): PrintSheet | null {
   const selected = new Set(input.selected);
   const blocks: SheetBlock[] = [];
@@ -121,14 +156,25 @@ export function buildPrintSheet(input: {
         payload: input.wifi.payload,
       });
     }
+    if (kind === "site" && input.site?.ok && input.site.url) {
+      blocks.push({
+        kind,
+        title: TITLES.site,
+        value: input.site.url,
+        payload: input.site.url,
+      });
+    }
   }
 
-  if (blocks.length === 0) return null;
-  const count = blocks.length as 1 | 2 | 3;
+  if (blocks.length === 0 || blocks.length > 4) return null;
+  const count = blocks.length as SheetCount;
   const shopName = input.shopName.trim() || null;
+  for (const block of blocks) {
+    if (block.kind === "site") block.value = truncateSheetText(block.value, DISPLAY_LIMIT[count]);
+  }
   return {
     count,
-    header: count === 3 ? "Central de QR Codes" : null,
+    header: count >= 3 ? "Central de QR Codes" : null,
     shopName,
     blocks,
     geometry: printGeometry(count),

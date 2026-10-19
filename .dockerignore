@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+_b64
+_decode.py
+_inspect_ws.py
+_bc_details.bin
+.env
+.env.*
+npm-debug.log*
